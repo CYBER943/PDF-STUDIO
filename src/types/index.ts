@@ -1,12 +1,31 @@
 export interface User {
   id: string;
   name: string;
+  displayName?: string;
   email: string;
+  avatar?: string;
+  avatarUrl?: string;
+  provider?: 'email' | 'google' | 'microsoft' | 'guest';
   createdAt: string;
+  updatedAt?: string;
   storageLimitBytes: number;
   isGuest: boolean;
-  avatarUrl?: string;
+  termsAcceptedAt?: string;
+  termsVersion?: string;
+  privacyVersion?: string;
 }
+
+export type AppView =
+  | 'dashboard'
+  | 'editor'
+  | 'vault'
+  | 'tools'
+  | 'terms'
+  | 'privacy'
+  | 'cookies'
+  | 'beta'
+  | 'security'
+  | 'contact';
 
 export interface DocumentItem {
   id: string;

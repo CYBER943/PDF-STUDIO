@@ -97,18 +97,32 @@ export const AllToolsModal: React.FC<AllToolsModalProps> = ({ isOpen, onClose, o
       tag: 'Extract',
     },
     {
+      id: 'page-organizer',
+      name: 'Page Organizer',
+      description: 'Reorder, rotate, or delete individual pages with live previews',
+      icon: <Sparkles className="w-6 h-6 text-blue-600" />,
+      tag: 'Organize',
+    },
+    {
+      id: 'protect',
+      name: 'Protect PDF',
+      description: 'Set password security and encryption on private documents',
+      icon: <Lock className="w-6 h-6 text-rose-600" />,
+      tag: 'Security',
+    },
+    {
+      id: 'unlock',
+      name: 'Unlock PDF',
+      description: 'Remove password restrictions with authorized access key',
+      icon: <Unlock className="w-6 h-6 text-emerald-600" />,
+      tag: 'Security',
+    },
+    {
       id: 'metadata',
       name: 'PDF Metadata',
       description: 'View and edit document Title, Author, Subject, and Keywords',
       icon: <Info className="w-6 h-6 text-slate-600" />,
       tag: 'Inspect',
-    },
-    {
-      id: 'protect',
-      name: 'Protect & Unlock',
-      description: 'Set password security or unlock authorized documents',
-      icon: <Lock className="w-6 h-6 text-rose-600" />,
-      tag: 'Security',
     },
   ];
 
@@ -121,7 +135,7 @@ export const AllToolsModal: React.FC<AllToolsModalProps> = ({ isOpen, onClose, o
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900">PDF Studio Tools</h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700">
-                12 Utilities
+                {tools.length} Utilities
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">

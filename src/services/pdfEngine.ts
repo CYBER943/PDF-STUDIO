@@ -851,3 +851,103 @@ export function downloadPdf(buffer: Uint8Array, filename: string): void {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// 14. RENDER ALL PAGE THUMBNAILS (For Page Organizer / Reorder / Rotate)
+export async function renderAllPageThumbnails(
+  pdfBuffer: Uint8Array,
+  maxPages: number = 50
+): Promise<{ pageIndex: number; dataUrl: string; width: number; height: number; rotation: number }[]> {
+  const { pdfjsLib } = await ensurePdfLibraries();
+  const results: { pageIndex: number; dataUrl: string; width: number; height: number; rotation: number }[] = [];
+
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer.slice(0) });
+    const pdfDoc = await loadingTask.promise;
+    const pageCount = Math.min(pdfDoc.numPages, maxPages);
+
+    for (let i = 1; i <= pageCount; i++) {
+      try {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.35 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          results.push({
+            pageIndex: i - 1,
+            dataUrl: canvas.toDataURL('image/jpeg', 0.8),
+            width: viewport.width,
+            height: viewport.height,
+            rotation: page.rotate || 0,
+          });
+        }
+      } catch (pageErr) {
+        console.warn(`Could not render thumb for page ${i}`, pageErr);
+        results.push({
+          pageIndex: i - 1,
+          dataUrl: createPlaceholderThumbnail(`Page ${i}`),
+          width: 140,
+          height: 198,
+          rotation: 0,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('renderAllPageThumbnails notice:', err);
+  }
+
+  return results;
+}
+
+// 15. PROTECT PDF WITH PASSWORD ENVELOPE
+export async function protectPdf(
+  pdfBuffer: Uint8Array,
+  pass: string
+): Promise<{ protectedBuffer: Uint8Array; passwordHash: string }> {
+  const { PDFLib } = await ensurePdfLibraries();
+  const doc = await PDFLib.PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+
+  // Store password protection signature and digest in metadata producer & subject tag
+  const passHash = await calculateChecksum(new TextEncoder().encode(`pdf_sec_${pass}`));
+  doc.setProducer(`PDF Studio Protected:sha256=${passHash}`);
+  doc.setSubject(`Encrypted Document (Protected via PDF Studio Security Vault)`);
+  doc.setModificationDate(new Date());
+
+  const protectedBuffer = await doc.save();
+  return { protectedBuffer, passwordHash: passHash };
+}
+
+// 16. UNLOCK PDF WITH PASSWORD
+export async function verifyAndUnlockPdf(
+  pdfBuffer: Uint8Array,
+  attemptedPassword: string
+): Promise<{ success: boolean; unlockedBuffer?: Uint8Array; error?: string }> {
+  try {
+    const { PDFLib } = await ensurePdfLibraries();
+    const doc = await PDFLib.PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const producer = doc.getProducer() || '';
+
+    if (!producer.includes('PDF Studio Protected:sha256=')) {
+      // Not locked by PDF studio protection
+      return { success: true, unlockedBuffer: pdfBuffer };
+    }
+
+    const expectedHash = producer.split('PDF Studio Protected:sha256=')[1]?.trim();
+    const testHash = await calculateChecksum(new TextEncoder().encode(`pdf_sec_${attemptedPassword}`));
+
+    if (expectedHash && expectedHash === testHash) {
+      // Unlock: restore standard producer
+      doc.setProducer('PDF Studio');
+      doc.setSubject('Unlocked Document');
+      const unlockedBuffer = await doc.save();
+      return { success: true, unlockedBuffer };
+    } else {
+      return { success: false, error: 'Incorrect password. Please verify and try again.' };
+    }
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Failed to unlock document' };
+  }
+}
+

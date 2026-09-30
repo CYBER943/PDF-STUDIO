@@ -37,6 +37,8 @@ interface DashboardViewProps {
   onShareDocument: (doc: DocumentItem) => void;
   onVersionHistory: (doc: DocumentItem) => void;
   onMetadataModal: (doc: DocumentItem) => void;
+  onOpenLegal?: (tab: 'terms' | 'privacy' | 'cookies' | 'beta' | 'security' | 'contact') => void;
+  onOpenAuth?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -45,6 +47,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onShareDocument,
   onVersionHistory,
   onMetadataModal,
+  onOpenLegal,
+  onOpenAuth,
 }) => {
   const { user } = useAuth();
   const {
@@ -797,6 +801,120 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             })}
           </div>
         )}
+
+        {/* Footer (Section 30) */}
+        <footer className="mt-16 pt-8 pb-12 border-t border-slate-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="space-y-2 col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-xs">
+                  PS
+                </div>
+                <span className="font-bold text-slate-900 tracking-tight text-sm">PDF STUDIO</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Create. Manage. Find. Recover. All-in-one browser PDF workspace.
+              </p>
+              <div className="pt-2">
+                <span className="text-[10px] bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded border border-amber-200">
+                  BETA v1.0.0
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+                Product
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li>
+                  <button
+                    onClick={() => onOpenTool('all-tools')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Tools Catalog
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('security')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Security Architecture
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('beta')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Beta Program
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+                Legal
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('terms')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Terms of Service
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('privacy')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Privacy Policy
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('cookies')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Cookie Policy
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+                Support
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li>
+                  <button
+                    onClick={() => onOpenLegal?.('contact')}
+                    className="hover:text-rose-600 transition-colors"
+                  >
+                    Contact & Help
+                  </button>
+                </li>
+                <li>
+                  <span className="text-slate-400">support@pdfstudio.app</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+            <div>© 2026 PDF Studio. All rights reserved.</div>
+            <div className="flex items-center gap-4">
+              <span>Zero-AI Document Training</span>
+              <span>•</span>
+              <span>Encrypted Client Storage</span>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

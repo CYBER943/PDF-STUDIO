@@ -27,8 +27,16 @@ import { SettingsModal } from './components/modals/SettingsModal';
 import { AuthModal } from './components/modals/AuthModal';
 import { DuplicateModal } from './components/modals/DuplicateModal';
 
-import { DocumentItem } from './types';
+import { DocumentItem, AppView } from './types';
 import { UploadCloud } from 'lucide-react';
+import { LegalView } from './components/LegalView';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { BetaModal } from './components/modals/BetaModal';
+import { ProtectModal } from './components/modals/ProtectModal';
+import { PageOrganizerModal } from './components/modals/PageOrganizerModal';
+import { LandingPage } from './components/landing/LandingPage';
+import { DevelopmentBanner } from './components/DevelopmentBanner';
+import { WelcomeModal } from './components/modals/WelcomeModal';
 
 const MainAppContent: React.FC = () => {
   const {
@@ -38,7 +46,16 @@ const MainAppContent: React.FC = () => {
     saveNewDocument,
     findDuplicateByChecksum,
     addToast,
+    storageStats,
   } = useDocuments();
+
+  // App Mode: 'landing' (public marketing & overview website) vs 'workspace' (application)
+  const [appMode, setAppMode] = useState<'landing' | 'workspace'>('landing');
+
+  // Primary view routing: 'dashboard' | 'legal' etc.
+  const [currentLegalTab, setCurrentLegalTab] = useState<
+    'terms' | 'privacy' | 'cookies' | 'beta' | 'security' | 'contact' | null
+  >(null);
 
   // Modals state
   const [activeToolModal, setActiveToolModal] = useState<string | null>(null);
@@ -49,6 +66,8 @@ const MainAppContent: React.FC = () => {
   const [metadataDoc, setMetadataDoc] = useState<DocumentItem | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
 
   // Duplicate upload detection state
   const [duplicateExisting, setDuplicateExisting] = useState<DocumentItem | null>(null);
@@ -64,6 +83,18 @@ const MainAppContent: React.FC = () => {
   const handleOpenTool = (toolName: string, doc?: DocumentItem) => {
     setModalTargetDoc(doc || null);
     setActiveToolModal(toolName);
+  };
+
+  const handleOpenLegal = (tab: 'terms' | 'privacy' | 'cookies' | 'beta' | 'security' | 'contact') => {
+    setCurrentLegalTab(tab);
+  };
+
+  const handleEnterWorkspace = () => {
+    setAppMode('workspace');
+    if (!sessionStorage.getItem('pdf_studio_welcomed')) {
+      setIsWelcomeModalOpen(true);
+      sessionStorage.setItem('pdf_studio_welcomed', 'true');
+    }
   };
 
   // Upload handler with duplicate detection
@@ -120,6 +151,16 @@ const MainAppContent: React.FC = () => {
     }
   };
 
+  // Dedicated Legal / Governance View (Terms, Privacy, Beta, Security, Contact)
+  if (currentLegalTab) {
+    return (
+      <LegalView
+        initialTab={currentLegalTab}
+        onBack={() => setCurrentLegalTab(null)}
+      />
+    );
+  }
+
   // When activeDocument is set, full-screen Studio Editor is displayed
   if (activeDocument) {
     return (
@@ -166,6 +207,16 @@ const MainAppContent: React.FC = () => {
           document={modalTargetDoc || activeDocument}
           onOpenDocument={(d) => setActiveDocument(d)}
         />
+        <PageOrganizerModal
+          isOpen={activeToolModal === 'page-organizer'}
+          onClose={() => setActiveToolModal(null)}
+          targetDoc={modalTargetDoc || activeDocument}
+        />
+        <ProtectModal
+          isOpen={activeToolModal === 'protect' || activeToolModal === 'unlock'}
+          onClose={() => setActiveToolModal(null)}
+          targetDoc={modalTargetDoc || activeDocument}
+        />
         <MetadataModal
           isOpen={activeToolModal === 'metadata'}
           onClose={() => setActiveToolModal(null)}
@@ -182,9 +233,44 @@ const MainAppContent: React.FC = () => {
     );
   }
 
+  // 1. PUBLIC LANDING WEBSITE (Section 1, 2, 4-13, 19-21, 28)
+  if (appMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onOpenAuth={() => setIsAuthOpen(true)}
+          onEnterApp={handleEnterWorkspace}
+          onOpenLegal={handleOpenLegal}
+          onOpenBetaModal={() => setIsBetaModalOpen(true)}
+        />
+
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onOpenLegal={(tab) => {
+            setIsAuthOpen(false);
+            handleOpenLegal(tab);
+          }}
+        />
+
+        <BetaModal
+          isOpen={isBetaModalOpen}
+          onClose={() => setIsBetaModalOpen(false)}
+          onOpenBetaPage={() => {
+            setIsBetaModalOpen(false);
+            handleOpenLegal('beta');
+          }}
+        />
+
+        <ToastContainer />
+      </>
+    );
+  }
+
+  // 2. LOGGED-IN / DEVELOPMENT APPLICATION WORKSPACE
   return (
     <div
-      className="min-h-screen flex flex-col bg-slate-50 font-sans relative"
+      className="min-h-screen flex flex-col bg-slate-50 font-sans relative pb-16 sm:pb-0"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -209,12 +295,21 @@ const MainAppContent: React.FC = () => {
         </div>
       )}
 
+      {/* Persistent Development Status Banner (Section 15) */}
+      <DevelopmentBanner
+        onLearnMore={() => setIsBetaModalOpen(true)}
+        onReturnToWebsite={() => setAppMode('landing')}
+      />
+
       {/* Top Application Header */}
       <Header
         onOpenTool={handleOpenTool}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onUploadClick={() => fileInputRef.current?.click()}
+        onOpenBetaModal={() => setIsBetaModalOpen(true)}
+        onOpenLegal={handleOpenLegal}
+        onBackToLanding={() => setAppMode('landing')}
       />
 
       {/* Main Layout Area */}
@@ -235,9 +330,24 @@ const MainAppContent: React.FC = () => {
             onShareDocument={(doc) => setShareDoc(doc)}
             onVersionHistory={(doc) => setVersionDoc(doc)}
             onMetadataModal={(doc) => setMetadataDoc(doc)}
+            onOpenLegal={handleOpenLegal}
+            onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        currentView={activeFilter === 'trash' ? 'vault' : 'dashboard'}
+        onNavigate={(view) => {
+          if (view === 'tools') handleOpenTool('all-tools');
+          else if (view === 'vault') {
+            handleOpenTool('all-tools');
+          }
+        }}
+        onOpenCreateMenu={() => handleOpenTool('create-blank')}
+        trashCount={storageStats.trashCount}
+      />
 
       {/* MODALS SUITE */}
       <AllToolsModal
@@ -257,6 +367,18 @@ const MainAppContent: React.FC = () => {
         onClose={() => setActiveToolModal(null)}
         document={modalTargetDoc}
         onOpenDocument={(doc) => setActiveDocument(doc)}
+      />
+
+      <PageOrganizerModal
+        isOpen={activeToolModal === 'page-organizer'}
+        onClose={() => setActiveToolModal(null)}
+        targetDoc={modalTargetDoc}
+      />
+
+      <ProtectModal
+        isOpen={activeToolModal === 'protect' || activeToolModal === 'unlock'}
+        onClose={() => setActiveToolModal(null)}
+        targetDoc={modalTargetDoc}
       />
 
       <SignModal
@@ -344,6 +466,33 @@ const MainAppContent: React.FC = () => {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        onOpenLegal={(tab) => {
+          setIsAuthOpen(false);
+          handleOpenLegal(tab);
+        }}
+      />
+
+      <BetaModal
+        isOpen={isBetaModalOpen}
+        onClose={() => setIsBetaModalOpen(false)}
+        onOpenBetaPage={() => {
+          setIsBetaModalOpen(false);
+          handleOpenLegal('beta');
+        }}
+      />
+
+      {/* First Login Welcome Onboarding Modal (Section 14) */}
+      <WelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        onOpenRoadmap={() => {
+          setIsWelcomeModalOpen(false);
+          setAppMode('landing');
+          setTimeout(() => {
+            const el = document.getElementById('roadmap');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        }}
       />
 
       <DuplicateModal

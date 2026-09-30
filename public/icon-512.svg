@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="100" fill="#e11d48"/>
+  <path d="M320 100H160a40 40 0 0 0-40 40v232a40 40 0 0 0 40 40h192a40 40 0 0 0 40-40V170l-72-70z" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="320 100 320 170 392 170" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="190" y1="270" x2="320" y2="270" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>
+  <line x1="190" y1="320" x2="280" y2="320" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>
+</svg>
