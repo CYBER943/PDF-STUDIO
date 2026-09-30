@@ -202,146 +202,164 @@ export const DocumentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       saveStoredFolders(defaultFolders);
       setFolders(defaultFolders);
 
+      const initialDocs: DocumentItem[] = [];
+
       // Create Sample 1: Welcome Guide
-      const guideBuffer = await createBlankPdf({
-        pageSize: 'A4',
-        orientation: 'portrait',
-        pageCount: 2,
-        title: 'Welcome to PDF Studio',
-        initialText:
-          'PDF Studio is your personal PDF workspace. Every document you create, merge, edit, or split is automatically saved to your private library. Organize with folders, tags, favorites, and rest easy knowing the Recovery Vault protects against accidental deletions with automatic retention countdown.',
-      });
+      try {
+        const guideBuffer = await createBlankPdf({
+          pageSize: 'A4',
+          orientation: 'portrait',
+          pageCount: 2,
+          title: 'Welcome to PDF Studio',
+          initialText:
+            'PDF Studio is your personal PDF workspace. Every document you create, merge, edit, or split is automatically saved to your private library. Organize with folders, tags, favorites, and rest easy knowing the Recovery Vault protects against accidental deletions with automatic retention countdown.',
+        });
 
-      const guideThumb = await generateThumbnail(guideBuffer, 1);
-      const guideChecksum = await calculateChecksum(guideBuffer);
-      const guideId = 'doc_welcome_guide';
+        const guideThumb = await generateThumbnail(guideBuffer, 1);
+        const guideChecksum = await calculateChecksum(guideBuffer);
+        const guideId = 'doc_welcome_guide';
 
-      await savePdfBlob(guideId, guideBuffer);
+        await savePdfBlob(guideId, guideBuffer);
 
-      const guideDoc: DocumentItem = {
-        id: guideId,
-        userId: user?.id || 'usr_demo_101',
-        filename: 'Welcome to PDF Studio Guide.pdf',
-        originalFilename: 'Welcome to PDF Studio Guide.pdf',
-        mimeType: 'application/pdf',
-        fileSize: guideBuffer.byteLength,
-        storageKey: guideId,
-        folderId: null,
-        createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-        deletedAt: null,
-        retentionExpiry: null,
-        isFavorite: true,
-        pageCount: 2,
-        pdfVersion: '1.7',
-        title: 'Welcome to PDF Studio Guide',
-        author: 'PDF Studio Team',
-        subject: 'Getting Started Guide',
-        tags: ['Guide', 'Important', 'Vault'],
-        thumbnail: guideThumb,
-        checksum: guideChecksum,
-        status: 'active',
-        version: 1,
-      };
+        const guideDoc: DocumentItem = {
+          id: guideId,
+          userId: user?.id || 'usr_demo_101',
+          filename: 'Welcome to PDF Studio Guide.pdf',
+          originalFilename: 'Welcome to PDF Studio Guide.pdf',
+          mimeType: 'application/pdf',
+          fileSize: guideBuffer.byteLength,
+          storageKey: guideId,
+          folderId: null,
+          createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+          deletedAt: null,
+          retentionExpiry: null,
+          isFavorite: true,
+          pageCount: 2,
+          pdfVersion: '1.7',
+          title: 'Welcome to PDF Studio Guide',
+          author: 'PDF Studio Team',
+          subject: 'Getting Started Guide',
+          tags: ['Guide', 'Important', 'Vault'],
+          thumbnail: guideThumb,
+          checksum: guideChecksum,
+          status: 'active',
+          version: 1,
+        };
+        initialDocs.push(guideDoc);
+      } catch (err) {
+        console.warn('Could not seed welcome guide:', err);
+      }
 
       // Create Sample 2: Invoice
-      const invoiceBuffer = await createBlankPdf({
-        pageSize: 'A4',
-        orientation: 'portrait',
-        pageCount: 1,
-        title: 'Invoice INV-2026-0948',
-        initialText:
-          'Billed To: ACME Corporation\nDate: September 2026\nServices: Enterprise Cloud Architecture & Document Security Vault Implementation\nSubtotal: $4,500.00\nTax (0%): $0.00\nTotal Due: $4,500.00\nStatus: Paid in Full via Direct Deposit.',
-      });
-      const invoiceThumb = await generateThumbnail(invoiceBuffer, 1);
-      const invoiceChecksum = await calculateChecksum(invoiceBuffer);
-      const invoiceId = 'doc_sample_invoice';
+      try {
+        const invoiceBuffer = await createBlankPdf({
+          pageSize: 'A4',
+          orientation: 'portrait',
+          pageCount: 1,
+          title: 'Invoice INV-2026-0948',
+          initialText:
+            'Billed To: ACME Corporation\nDate: September 2026\nServices: Enterprise Cloud Architecture & Document Security Vault Implementation\nSubtotal: $4,500.00\nTax (0%): $0.00\nTotal Due: $4,500.00\nStatus: Paid in Full via Direct Deposit.',
+        });
+        const invoiceThumb = await generateThumbnail(invoiceBuffer, 1);
+        const invoiceChecksum = await calculateChecksum(invoiceBuffer);
+        const invoiceId = 'doc_sample_invoice';
 
-      await savePdfBlob(invoiceId, invoiceBuffer);
+        await savePdfBlob(invoiceId, invoiceBuffer);
 
-      const invoiceDoc: DocumentItem = {
-        id: invoiceId,
-        userId: user?.id || 'usr_demo_101',
-        filename: 'Invoice INV-2026-0948.pdf',
-        originalFilename: 'Invoice INV-2026-0948.pdf',
-        mimeType: 'application/pdf',
-        fileSize: invoiceBuffer.byteLength,
-        storageKey: invoiceId,
-        folderId: 'fld_invoices',
-        createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
-        updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        deletedAt: null,
-        retentionExpiry: null,
-        isFavorite: true,
-        pageCount: 1,
-        pdfVersion: '1.7',
-        title: 'Invoice INV-2026-0948',
-        author: 'Finance Dept',
-        subject: 'Cloud Services Invoice',
-        tags: ['Invoice', 'Work', '2026'],
-        thumbnail: invoiceThumb,
-        checksum: invoiceChecksum,
-        status: 'active',
-        version: 1,
-      };
+        const invoiceDoc: DocumentItem = {
+          id: invoiceId,
+          userId: user?.id || 'usr_demo_101',
+          filename: 'Invoice INV-2026-0948.pdf',
+          originalFilename: 'Invoice INV-2026-0948.pdf',
+          mimeType: 'application/pdf',
+          fileSize: invoiceBuffer.byteLength,
+          storageKey: invoiceId,
+          folderId: 'fld_invoices',
+          createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+          deletedAt: null,
+          retentionExpiry: null,
+          isFavorite: true,
+          pageCount: 1,
+          pdfVersion: '1.7',
+          title: 'Invoice INV-2026-0948',
+          author: 'Finance Dept',
+          subject: 'Cloud Services Invoice',
+          tags: ['Invoice', 'Work', '2026'],
+          thumbnail: invoiceThumb,
+          checksum: invoiceChecksum,
+          status: 'active',
+          version: 1,
+        };
+        initialDocs.push(invoiceDoc);
+      } catch (err) {
+        console.warn('Could not seed sample invoice:', err);
+      }
 
       // Create Sample 3: A document in Trash to showcase the Recovery Vault immediately!
-      const trashBuffer = await createBlankPdf({
-        pageSize: 'A4',
-        orientation: 'portrait',
-        pageCount: 1,
-        title: 'Draft Project Notes - Archived',
-        initialText:
-          'Old draft notes from preliminary design sprint. This item is kept in the Recovery Vault and can be restored before permanent deletion.',
-      });
-      const trashThumb = await generateThumbnail(trashBuffer, 1);
-      const trashChecksum = await calculateChecksum(trashBuffer);
-      const trashId = 'doc_archived_notes';
+      try {
+        const trashBuffer = await createBlankPdf({
+          pageSize: 'A4',
+          orientation: 'portrait',
+          pageCount: 1,
+          title: 'Draft Project Notes - Archived',
+          initialText:
+            'Old draft notes from preliminary design sprint. This item is kept in the Recovery Vault and can be restored before permanent deletion.',
+        });
+        const trashThumb = await generateThumbnail(trashBuffer, 1);
+        const trashChecksum = await calculateChecksum(trashBuffer);
+        const trashId = 'doc_archived_notes';
 
-      await savePdfBlob(trashId, trashBuffer);
+        await savePdfBlob(trashId, trashBuffer);
 
-      const deletedTimestamp = new Date(Date.now() - 6 * 24 * 3600 * 1000);
-      const expiryTimestamp = new Date(deletedTimestamp.getTime() + retentionDays * 24 * 3600 * 1000);
+        const deletedTimestamp = new Date(Date.now() - 6 * 24 * 3600 * 1000);
+        const expiryTimestamp = new Date(deletedTimestamp.getTime() + retentionDays * 24 * 3600 * 1000);
 
-      const trashDoc: DocumentItem = {
-        id: trashId,
-        userId: user?.id || 'usr_demo_101',
-        filename: 'Draft Project Notes - Archived.pdf',
-        originalFilename: 'Draft Project Notes - Archived.pdf',
-        mimeType: 'application/pdf',
-        fileSize: trashBuffer.byteLength,
-        storageKey: trashId,
-        folderId: 'fld_work',
-        createdAt: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
-        updatedAt: deletedTimestamp.toISOString(),
-        deletedAt: deletedTimestamp.toISOString(),
-        retentionExpiry: expiryTimestamp.toISOString(),
-        isFavorite: false,
-        pageCount: 1,
-        pdfVersion: '1.7',
-        title: 'Draft Project Notes',
-        author: 'Alex Morgan',
-        subject: 'Preliminary Notes',
-        tags: ['Draft', 'Work'],
-        thumbnail: trashThumb,
-        checksum: trashChecksum,
-        status: 'trash',
-        version: 1,
-      };
+        const trashDoc: DocumentItem = {
+          id: trashId,
+          userId: user?.id || 'usr_demo_101',
+          filename: 'Draft Project Notes - Archived.pdf',
+          originalFilename: 'Draft Project Notes - Archived.pdf',
+          mimeType: 'application/pdf',
+          fileSize: trashBuffer.byteLength,
+          storageKey: trashId,
+          folderId: 'fld_work',
+          createdAt: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
+          updatedAt: deletedTimestamp.toISOString(),
+          deletedAt: deletedTimestamp.toISOString(),
+          retentionExpiry: expiryTimestamp.toISOString(),
+          isFavorite: false,
+          pageCount: 1,
+          pdfVersion: '1.7',
+          title: 'Draft Project Notes',
+          author: 'Alex Morgan',
+          subject: 'Preliminary Notes',
+          tags: ['Draft', 'Work'],
+          thumbnail: trashThumb,
+          checksum: trashChecksum,
+          status: 'trash',
+          version: 1,
+        };
+        initialDocs.push(trashDoc);
+      } catch (err) {
+        console.warn('Could not seed trash doc:', err);
+      }
 
-      const initialDocs = [guideDoc, invoiceDoc, trashDoc];
-      saveStoredDocuments(initialDocs);
-      setDocuments(initialDocs);
+      if (initialDocs.length > 0) {
+        saveStoredDocuments(initialDocs);
+        setDocuments(initialDocs);
 
-      logActivity({
-        userId: user?.id || 'usr_demo_101',
-        documentId: guideId,
-        documentName: guideDoc.filename,
-        action: 'create',
-        description: 'Initialized Welcome Guide in PDF Studio',
-      });
+        logActivity({
+          userId: user?.id || 'usr_demo_101',
+          documentId: 'doc_welcome_guide',
+          documentName: 'Welcome to PDF Studio Guide.pdf',
+          action: 'create',
+          description: 'Initialized Welcome Guide in PDF Studio',
+        });
+      }
     } catch (e) {
-      console.error('Failed to seed initial workspace', e);
+      console.warn('Initial workspace seed notice:', e);
     }
   };
 

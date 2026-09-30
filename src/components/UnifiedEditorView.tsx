@@ -107,39 +107,72 @@ export const UnifiedEditorView: React.FC<UnifiedEditorViewProps> = ({
     ensurePdfLibraries().then(({ pdfjsLib }) => {
       if (cancel || !pdfjsLib) return;
 
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer.slice(0) });
-      loadingTask.promise.then((pdfDoc: any) => {
-        if (cancel) return;
-        setNumPages(pdfDoc.numPages);
-        const pageToRender = Math.min(currentPage, pdfDoc.numPages);
+      try {
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer.slice(0) });
+        loadingTask.promise
+          .then((pdfDoc: any) => {
+            if (cancel) return;
+            setNumPages(pdfDoc.numPages);
+            const pageToRender = Math.min(currentPage, pdfDoc.numPages);
 
-        pdfDoc.getPage(pageToRender).then((page: any) => {
-          if (cancel || !canvasRef.current) return;
-          const viewport = page.getViewport({ scale: zoomScale * 1.5 });
-          const canvas = canvasRef.current;
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
+            pdfDoc.getPage(pageToRender)
+              .then((page: any) => {
+                if (cancel || !canvasRef.current) return;
+                const viewport = page.getViewport({ scale: zoomScale * 1.5 });
+                const canvas = canvasRef.current;
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
 
-          page.render({
-            canvasContext: ctx,
-            viewport: viewport,
-          }).promise.then(() => {
-            // If drawing canvas is present, sync dimensions
-            if (drawingCanvasRef.current) {
-              drawingCanvasRef.current.width = viewport.width;
-              drawingCanvasRef.current.height = viewport.height;
+                page.render({
+                  canvasContext: ctx,
+                  viewport: viewport,
+                }).promise
+                  .then(() => {
+                    // If drawing canvas is present, sync dimensions
+                    if (drawingCanvasRef.current) {
+                      drawingCanvasRef.current.width = viewport.width;
+                      drawingCanvasRef.current.height = viewport.height;
+                    }
+                  })
+                  .catch((renderErr: any) => {
+                    console.warn('Page render minor notice:', renderErr);
+                  });
+              })
+              .catch((pageErr: any) => {
+                console.warn('GetPage notice:', pageErr);
+              });
+          })
+          .catch((loadErr: any) => {
+            console.warn('PDF loading notice:', loadErr);
+            // Draw a neat fallback document preview on canvas
+            if (canvasRef.current) {
+              const canvas = canvasRef.current;
+              canvas.width = 600 * zoomScale;
+              canvas.height = 800 * zoomScale;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+                ctx.fillStyle = '#64748b';
+                ctx.font = '16px Inter, sans-serif';
+                ctx.fillText(title || 'Document Page', 40, 60);
+              }
             }
           });
-        });
-      });
+      } catch (err) {
+        console.warn('PDF render setup notice:', err);
+      }
     });
 
     return () => {
       cancel = true;
     };
-  }, [pdfBuffer, currentPage, zoomScale]);
+  }, [pdfBuffer, currentPage, zoomScale, title]);
 
   // Handle Freehand Drawing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {

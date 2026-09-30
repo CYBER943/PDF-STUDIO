@@ -1,6 +1,8 @@
+import * as PDFLib from 'pdf-lib';
+import * as pdfjsLib from 'pdfjs-dist';
 import { PdfMetadata, OverlayAnnotation } from '../types';
 
-// Declare types for PDFLib and pdfjsLib from CDN
+// Declare types for window fallbacks if needed
 declare global {
   interface Window {
     PDFLib?: any;
@@ -8,45 +10,23 @@ declare global {
   }
 }
 
-// Helper to dynamically load external ESM modules without static TS resolution
-const loadEsmModule = (url: string) => {
-  return new Function('u', 'return import(u)')(url);
-};
+// Configure PDF.js worker safely
+try {
+  if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+    // In browser, point to cdnjs or local worker url, but don't fail if offline
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+} catch {
+  // worker config fallback
+}
 
-// Wait for libraries to be ready if they were loaded via script tags
+// Get the PDF libraries - PDFLib is always bundled and available immediately!
 export async function ensurePdfLibraries(): Promise<{ PDFLib: any; pdfjsLib: any }> {
-  let attempts = 0;
-  while ((!window.PDFLib || !window.pdfjsLib) && attempts < 40) {
-    await new Promise((r) => setTimeout(r, 100));
-    attempts++;
-  }
+  const activePdfLib = (PDFLib as any)?.PDFDocument ? PDFLib : (window.PDFLib || PDFLib);
+  const activePdfjsLib = (pdfjsLib as any)?.getDocument ? pdfjsLib : (window.pdfjsLib || pdfjsLib);
 
-  if (!window.PDFLib) {
-    try {
-      // Dynamic import fallback
-      const pdfLibModule = await loadEsmModule('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/+esm');
-      window.PDFLib = pdfLibModule;
-    } catch (e) {
-      console.warn('Could not load PDFLib via dynamic import', e);
-    }
-  }
-
-  if (!window.pdfjsLib) {
-    try {
-      const pdfjsModule = await loadEsmModule('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm');
-      window.pdfjsLib = pdfjsModule;
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    } catch (e) {
-      console.warn('Could not load pdfjsLib via dynamic import', e);
-    }
-  }
-
-  if (!window.PDFLib) {
-    throw new Error('PDF-Lib failed to load. Please verify internet connection.');
-  }
-
-  return { PDFLib: window.PDFLib, pdfjsLib: window.pdfjsLib };
+  return { PDFLib: activePdfLib, pdfjsLib: activePdfjsLib };
 }
 
 // SHA-256 Checksum calculation for duplicate detection
@@ -131,6 +111,46 @@ function createPlaceholderThumbnail(label: string): string {
   return canvas.toDataURL('image/png');
 }
 
+// Fallback standard PDF 1.4 generator in pure JavaScript
+export function createFallbackPdfBytes(title: string, text: string): Uint8Array {
+  const safeTitle = (title || 'PDF Document').replace(/[()\\]/g, '');
+  const safeText = (text || 'Created with PDF Studio').replace(/[()\\]/g, '').slice(0, 300);
+  const content = `BT /F1 18 Tf 50 780 Td (${safeTitle}) Tj ET BT /F1 11 Tf 50 740 Td (${safeText}) Tj ET`;
+  const pdfString = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length ${content.length} >>
+stream
+${content}
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000300 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+370
+%%EOF`;
+  return new TextEncoder().encode(pdfString);
+}
+
 // 1. CREATE BLANK PDF
 export interface BlankPdfOptions {
   pageSize: 'A4' | 'Letter' | 'Custom';
@@ -143,56 +163,61 @@ export interface BlankPdfOptions {
 }
 
 export async function createBlankPdf(options: BlankPdfOptions): Promise<Uint8Array> {
-  const { PDFLib } = await ensurePdfLibraries();
-  const pdfDoc = await PDFLib.PDFDocument.create();
+  try {
+    const { PDFLib } = await ensurePdfLibraries();
+    const pdfDoc = await PDFLib.PDFDocument.create();
 
-  let [width, height] = [595.28, 841.89]; // A4 default points
-  if (options.pageSize === 'Letter') {
-    [width, height] = [612.0, 792.0];
-  } else if (options.pageSize === 'Custom' && options.customWidth && options.customHeight) {
-    [width, height] = [options.customWidth, options.customHeight];
-  }
+    let [width, height] = [595.28, 841.89]; // A4 default points
+    if (options.pageSize === 'Letter') {
+      [width, height] = [612.0, 792.0];
+    } else if (options.pageSize === 'Custom' && options.customWidth && options.customHeight) {
+      [width, height] = [options.customWidth, options.customHeight];
+    }
 
-  if (options.orientation === 'landscape') {
-    [width, height] = [height, width];
-  }
+    if (options.orientation === 'landscape') {
+      [width, height] = [height, width];
+    }
 
-  const count = options.pageCount || 1;
-  const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const count = options.pageCount || 1;
+    const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
-  for (let i = 0; i < count; i++) {
-    const page = pdfDoc.addPage([width, height]);
-    if (i === 0 && options.title) {
-      page.drawText(options.title, {
-        x: 50,
-        y: height - 60,
-        size: 22,
-        font: boldFont,
-        color: PDFLib.rgb(0.09, 0.12, 0.17),
-      });
-
-      if (options.initialText) {
-        page.drawText(options.initialText, {
+    for (let i = 0; i < count; i++) {
+      const page = pdfDoc.addPage([width, height]);
+      if (i === 0 && options.title) {
+        page.drawText(options.title, {
           x: 50,
-          y: height - 100,
-          size: 12,
-          font: font,
-          color: PDFLib.rgb(0.2, 0.25, 0.33),
-          maxWidth: width - 100,
-          lineHeight: 18,
+          y: height - 60,
+          size: 22,
+          font: boldFont,
+          color: PDFLib.rgb(0.09, 0.12, 0.17),
         });
+
+        if (options.initialText) {
+          page.drawText(options.initialText, {
+            x: 50,
+            y: height - 100,
+            size: 12,
+            font: font,
+            color: PDFLib.rgb(0.2, 0.25, 0.33),
+            maxWidth: width - 100,
+            lineHeight: 18,
+          });
+        }
       }
     }
+
+    pdfDoc.setTitle(options.title || 'Untitled Document');
+    pdfDoc.setProducer('PDF Studio');
+    pdfDoc.setCreator('PDF Studio Web');
+    pdfDoc.setCreationDate(new Date());
+    pdfDoc.setModificationDate(new Date());
+
+    return await pdfDoc.save();
+  } catch (err) {
+    console.warn('createBlankPdf encountered an issue, generating fallback PDF bytes', err);
+    return createFallbackPdfBytes(options.title || 'Untitled Document', options.initialText || '');
   }
-
-  pdfDoc.setTitle(options.title || 'Untitled Document');
-  pdfDoc.setProducer('PDF Studio');
-  pdfDoc.setCreator('PDF Studio Web');
-  pdfDoc.setCreationDate(new Date());
-  pdfDoc.setModificationDate(new Date());
-
-  return await pdfDoc.save();
 }
 
 // 2. CREATE PDF FROM IMAGES
